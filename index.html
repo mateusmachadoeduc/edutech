@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torneio de Robôs Fura-Balão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .bracket-line {
+            position: relative;
+        }
+        .bracket-line::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: -20px;
+            width: 20px;
+            height: 2px;
+            background: #4b5563;
+        }
+        .bracket-line::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: 0;
+            width: 10px;
+            height: calc(50% + 20px);
+            border-right: 2px solid #4b5563;
+            border-bottom: 2px solid #4b5563;
+        }
+        .winner {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        .robot-icon {
+            transition: all 0.3s ease;
+        }
+        .robot-icon:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-indigo-800 mb-2">Torneio de Robôs Fura-Balão</h1>
+            <p class="text-lg text-gray-600">Cadastre os robôs e organize o torneio automaticamente!</p>
+            <div class="mt-4">
+                <i class="fas fa-robot text-5xl text-indigo-600"></i>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Formulário de Cadastro -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-plus-circle mr-2 text-indigo-600"></i> Cadastrar Robô
+                </h2>
+                <form id="robotForm" class="space-y-4">
+                    <input type="hidden" id="robotId">
+                    <div>
+                        <label for="robotName" class="block text-sm font-medium text-gray-700">Nome do Robô</label>
+                        <input type="text" id="robotName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                    </div>
+                    <div>
+                        <label for="robotTeam" class="block text-sm font-medium text-gray-700">Equipe</label>
+                        <input type="text" id="robotTeam" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                    </div>
+                    <div>
+                        <label for="robotSchool" class="block text-sm font-medium text-gray-700">Escola</label>
+                        <input type="text" id="robotSchool" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                    </div>
+                    <div class="flex space-x-3">
+                        <button type="submit" id="submitBtn" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-save mr-2"></i> Salvar
+                        </button>
+                        <button type="button" id="cancelEditBtn" class="hidden inline-flex items-center px-4 py-2 bg-gray-500 border border-transparent rounded-md font-semibold text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                            <i class="fas fa-times mr-2"></i> Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Lista de Robôs Cadastrados -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
+                    <i class="fas fa-list-ul mr-2 text-indigo-600"></i> Robôs Cadastrados
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Equipe</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Escola</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="robotList" class="bg-white divide-y divide-gray-200">
+                            <!-- Robots will be listed here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 flex justify-between items-center">
+                    <p id="robotCount" class="text-sm text-gray-600">0 robôs cadastrados</p>
+                    <button id="generateTournamentBtn" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50" disabled>
+                        <i class="fas fa-trophy mr-2"></i> Gerar Torneio
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção do Torneio -->
+        <div id="tournamentSection" class="mt-12 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-trophy mr-2 text-yellow-500"></i> Chaveamento do Torneio
+                    </h2>
+                    <div class="flex space-x-3">
+                        <button id="nextRoundBtn" class="hidden inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-arrow-right mr-2"></i> Próxima Rodada
+                        </button>
+                        <button id="resetTournamentBtn" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <i class="fas fa-redo mr-2"></i> Reiniciar Torneio
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tournamentBrackets" class="overflow-x-auto py-4">
+                    <!-- Tournament brackets will be generated here -->
+                </div>
+
+                <div id="winnerAnnouncement" class="mt-8 hidden">
+                    <div class="bg-gradient-to-r from-yellow-100 to-yellow-200 p-6 rounded-lg text-center">
+                        <h3 class="text-3xl font-bold text-yellow-800 mb-4">CAMPEÃO DO TORNEIO!</h3>
+                        <div id="championRobot" class="inline-block bg-white p-6 rounded-lg shadow-lg">
+                            <!-- Champion robot will be shown here -->
+                        </div>
+                        <div class="mt-6">
+                            <i class="fas fa-trophy text-6xl text-yellow-500"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Armazenamento de robôs
+        let robots = [];
+        let currentRound = 0;
+        let tournamentRounds = [];
+        let isEditing = false;
+
+        // Elementos DOM
+        const robotForm = document.getElementById('robotForm');
+        const robotList = document.getElementById('robotList');
+        const robotCount = document.getElementById('robotCount');
+        const generateTournamentBtn = document.getElementById('generateTournamentBtn');
+        const tournamentSection = document.getElementById('tournamentSection');
+        const tournamentBrackets = document.getElementById('tournamentBrackets');
+        const nextRoundBtn = document.getElementById('nextRoundBtn');
+        const resetTournamentBtn = document.getElementById('resetTournamentBtn');
+        const winnerAnnouncement = document.getElementById('winnerAnnouncement');
+        const championRobot = document.getElementById('championRobot');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+        // Carregar robôs do localStorage
+        function loadRobots() {
+            const savedRobots = localStorage.getItem('balloonRobots');
+            if (savedRobots) {
+                robots = JSON.parse(savedRobots);
+                updateRobotList();
+                updateRobotCount();
+                toggleGenerateButton();
+            }
+        }
+
+        // Salvar robôs no localStorage
+        function saveRobots() {
+            localStorage.setItem('balloonRobots', JSON.stringify(robots));
+            updateRobotList();
+            updateRobotCount();
+            toggleGenerateButton();
+        }
+
+        // Atualizar lista de robôs na tabela
+        function updateRobotList() {
+            robotList.innerHTML = '';
+            robots.forEach((robot, index) => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${robot.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${robot.team}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${robot.school}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <button onclick="editRobot(${index})" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteRobot(${index})" class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                robotList.appendChild(row);
+            });
+        }
+
+        // Atualizar contador de robôs
+        function updateRobotCount() {
+            const count = robots.length;
+            robotCount.textContent = `${count} robô${count !== 1 ? 's' : ''} cadastrado${count !== 1 ? 's' : ''}`;
+        }
+
+        // Habilitar/desabilitar botão de gerar torneio
+        function toggleGenerateButton() {
+            generateTournamentBtn.disabled = robots.length < 2;
+        }
+
+        // Adicionar/editar robô
+        robotForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('robotId').value;
+            const name = document.getElementById('robotName').value.trim();
+            const team = document.getElementById('robotTeam').value.trim();
+            const school = document.getElementById('robotSchool').value.trim();
+            
+            if (isEditing) {
+                // Editar robô existente
+                robots[id] = { name, team, school };
+                isEditing = false;
+                document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save mr-2"></i> Salvar';
+                cancelEditBtn.classList.add('hidden');
+            } else {
+                // Adicionar novo robô
+                robots.push({ name, team, school });
+            }
+            
+            saveRobots();
+            robotForm.reset();
+            document.getElementById('robotId').value = '';
+        });
+
+        // Editar robô
+        function editRobot(index) {
+            const robot = robots[index];
+            document.getElementById('robotId').value = index;
+            document.getElementById('robotName').value = robot.name;
+            document.getElementById('robotTeam').value = robot.team;
+            document.getElementById('robotSchool').value = robot.school;
+            
+            isEditing = true;
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save mr-2"></i> Atualizar';
+            cancelEditBtn.classList.remove('hidden');
+            
+            // Scroll para o formulário
+            document.getElementById('robotName').focus();
+        }
+
+        // Cancelar edição
+        cancelEditBtn.addEventListener('click', function() {
+            robotForm.reset();
+            document.getElementById('robotId').value = '';
+            isEditing = false;
+            document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save mr-2"></i> Salvar';
+            cancelEditBtn.classList.add('hidden');
+        });
+
+        // Excluir robô
+        function deleteRobot(index) {
+            if (confirm('Tem certeza que deseja excluir este robô?')) {
+                robots.splice(index, 1);
+                saveRobots();
+            }
+        }
+
+        // Gerar torneio
+        generateTournamentBtn.addEventListener('click', function() {
+            // Embaralhar robôs para sorteio
+            const shuffledRobots = [...robots].sort(() => Math.random() - 0.5);
+            
+            // Criar rodadas do torneio
+            tournamentRounds = [];
+            let currentRoundRobots = [...shuffledRobots];
+            currentRound = 0;
+            
+            while (currentRoundRobots.length > 1) {
+                const nextRoundRobots = [];
+                const roundMatches = [];
+                
+                for (let i = 0; i < currentRoundRobots.length; i += 2) {
+                    if (i + 1 < currentRoundRobots.length) {
+                        const match = {
+                            robot1: currentRoundRobots[i],
+                            robot2: currentRoundRobots[i + 1],
+                            winner: null
+                        };
+                        roundMatches.push(match);
+                    } else {
+                        // Robô recebe bye (passa automaticamente)
+                        roundMatches.push({
+                            robot1: currentRoundRobots[i],
+                            robot2: null,
+                            winner: currentRoundRobots[i]
+                        });
+                    }
+                }
+                
+                tournamentRounds.push(roundMatches);
+                currentRoundRobots = roundMatches.map(match => match.winner || match.robot1);
+            }
+            
+            // Mostrar seção do torneio
+            tournamentSection.classList.remove('hidden');
+            winnerAnnouncement.classList.add('hidden');
+            
+            // Mostrar primeira rodada
+            showCurrentRound();
+        });
+
+        // Mostrar rodada atual
+        function showCurrentRound() {
+            tournamentBrackets.innerHTML = '';
+            
+            if (currentRound >= tournamentRounds.length) {
+                // Torneio terminou, mostrar campeão
+                showChampion();
+                return;
+            }
+            
+            const round = tournamentRounds[currentRound];
+            const roundDiv = document.createElement('div');
+            roundDiv.className = 'flex flex-col items-center';
+            
+            const roundTitle = document.createElement('h3');
+            roundTitle.className = 'text-xl font-bold text-gray-800 mb-4';
+            
+            if (currentRound === tournamentRounds.length - 1) {
+                roundTitle.textContent = 'FINAL';
+            } else if (currentRound === tournamentRounds.length - 2) {
+                roundTitle.textContent = 'SEMIFINAL';
+            } else {
+                roundTitle.textContent = `RODADA ${currentRound + 1}`;
+            }
+            
+            roundDiv.appendChild(roundTitle);
+            
+            const matchesContainer = document.createElement('div');
+            matchesContainer.className = 'space-y-6';
+            
+            round.forEach((match, index) => {
+                const matchDiv = document.createElement('div');
+                matchDiv.className = 'flex items-center space-x-8';
+                
+                // Robô 1
+                const robot1Div = document.createElement('div');
+                robot1Div.className = `flex items-center p-4 rounded-lg border-2 ${match.winner === match.robot1 ? 'border-green-500 bg-green-50 winner' : 'border-gray-200'} ${match.winner === null ? 'hover:bg-gray-50 cursor-pointer' : ''}`;
+                robot1Div.onclick = () => selectWinner(match, match.robot1);
+                robot1Div.innerHTML = `
+                    <div class="robot-icon">
+                        <i class="fas fa-robot text-3xl mr-3 ${match.winner === match.robot1 ? 'text-green-600' : 'text-indigo-600'}"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold">${match.robot1.name}</h4>
+                        <p class="text-sm text-gray-600">${match.robot1.team} - ${match.robot1.school}</p>
+                    </div>
+                `;
+                
+                // VS
+                const vsDiv = document.createElement('div');
+                vsDiv.className = 'text-gray-500 font-bold';
+                vsDiv.textContent = 'VS';
+                
+                // Robô 2 ou "BYE"
+                let robot2Div;
+                if (match.robot2) {
+                    robot2Div = document.createElement('div');
+                    robot2Div.className = `flex items-center p-4 rounded-lg border-2 ${match.winner === match.robot2 ? 'border-green-500 bg-green-50 winner' : 'border-gray-200'} ${match.winner === null ? 'hover:bg-gray-50 cursor-pointer' : ''}`;
+                    robot2Div.onclick = () => selectWinner(match, match.robot2);
+                    robot2Div.innerHTML = `
+                        <div class="robot-icon">
+                            <i class="fas fa-robot text-3xl mr-3 ${match.winner === match.robot2 ? 'text-green-600' : 'text-indigo-600'}"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">${match.robot2.name}</h4>
+                            <p class="text-sm text-gray-600">${match.robot2.team} - ${match.robot2.school}</p>
+                        </div>
+                    `;
+                } else {
+                    robot2Div = document.createElement('div');
+                    robot2Div.className = 'flex items-center p-4 rounded-lg border-2 border-yellow-200 bg-yellow-50';
+                    robot2Div.innerHTML = `
+                        <div class="robot-icon">
+                            <i class="fas fa-fast-forward text-3xl mr-3 text-yellow-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold">BYE</h4>
+                            <p class="text-sm text-gray-600">Passa automaticamente</p>
+                        </div>
+                    `;
+                }
+                
+                matchDiv.appendChild(robot1Div);
+                matchDiv.appendChild(vsDiv);
+                matchDiv.appendChild(robot2Div);
+                matchesContainer.appendChild(matchDiv);
+            });
+            
+            roundDiv.appendChild(matchesContainer);
+            tournamentBrackets.appendChild(roundDiv);
+            
+            // Mostrar/ocultar botão de próxima rodada
+            const allMatchesHaveWinner = round.every(match => match.winner !== null);
+            nextRoundBtn.classList.toggle('hidden', !allMatchesHaveWinner);
+        }
+
+        // Selecionar vencedor de uma partida
+        function selectWinner(match, winner) {
+            if (match.winner !== null) return; // Já tem vencedor
+            
+            match.winner = winner;
+            showCurrentRound();
+        }
+
+        // Avançar para próxima rodada
+        nextRoundBtn.addEventListener('click', function() {
+            currentRound++;
+            showCurrentRound();
+        });
+
+        // Mostrar campeão
+        function showChampion() {
+            const finalMatch = tournamentRounds[tournamentRounds.length - 1][0];
+            const champion = finalMatch.winner;
+            
+            championRobot.innerHTML = `
+                <div class="text-center">
+                    <i class="fas fa-robot text-5xl text-yellow-600 mb-4"></i>
+                    <h3 class="text-2xl font-bold">${champion.name}</h3>
+                    <p class="text-lg">${champion.team}</p>
+                    <p class="text-gray-600">${champion.school}</p>
+                </div>
+            `;
+            
+            winnerAnnouncement.classList.remove('hidden');
+            nextRoundBtn.classList.add('hidden');
+        }
+
+        // Reiniciar torneio
+        resetTournamentBtn.addEventListener('click', function() {
+            if (confirm('Tem certeza que deseja reiniciar o torneio?')) {
+                tournamentSection.classList.add('hidden');
+            }
+        });
+
+        // Carregar robôs quando a página carregar
+        window.addEventListener('DOMContentLoaded', loadRobots);
+    </script>
+</body>
+</html>
